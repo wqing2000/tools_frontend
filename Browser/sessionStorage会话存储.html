@@ -1,0 +1,226 @@
+<!--
+ * @Author: your name
+ * @Date: 2021-06-23 09:54:10
+ * @LastEditTime: 2021-06-28 09:26:01
+ * @LastEditors: Please set LastEditors
+ * @Description: In User Settings Edit
+ * @FilePath: \Browser\sessionStorage会话存储.html
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <script>
+    //sessionStorage是一种临时的会话存储，只在当次会话（生命周期）生效 （关闭网页即刻失效）
+    console.log(window.sessionStorage);
+    //sessionStorage.setItem('属性名', 值) 设置属性
+    window.sessionStorage.setItem('name', '张三')
+    //sessionStorage.getItem('属性名') 获取属性值
+    window.sessionStorage.getItem('name') //张三
+    //sessionStorage.removeItem('属性名') 删除某属性
+    window.sessionStorage.removeItem('name');
+    //sessionStorage.clear()清除所有属性
+    window.sessionStorage.clear();
+
+
+
+    //对sessionStorage进行封装（像cookie一样）否则只能单个单个设置
+    /*  (function (w) {
+ 
+       class Storage {
+         constructor(type = 'session') {
+           this.storage = w[`${type}Storage`];
+           this.history = {}
+         }
+ 
+ 
+         //设置存储项
+         setStorage(...args) {
+           const len = args.length;
+           if (len === 0) {
+             //如果无参数 return false终止后续
+             return false;
+           }
+           if (len === 2) {
+             //如果两个参数 并且两个参数都不是对象或者数组 以字符串形式setItem
+             if (args.every(item => typeof item !== 'object')) {
+               this.history[args[0]] = args[1];
+               this.storage.setItem(String(args[0]), String(args[1]));
+             }
+             //反馈设置项目 提供check
+             return {
+               [args[0]]: args[1]
+             }
+           }
+ 
+           if (len === 1) {
+             //如果1个参数 并且是对象 合并到this.history中并且 迭代设置每一项
+             if (Object.prototype.toString.call(args[0]) === "[object Object]") {
+               let obj = args[0];
+               Object.assign(this.history, obj);
+               //返回给调用者一个 Array 方便check存储项目
+               return Object.entries(obj).map(([key, value]) => {
+                 this.storage.setItem(key, value);
+                 return key;
+               })
+             }
+           }
+           //返回所有设置历史 供check
+           return this.history;
+         }
+ 
+ 
+         //获取存储项目
+         getStorage(...args) {
+           const len = args.length;
+           if (len === 0) {
+             //如果不传参数 返回所有的存储项目
+             return this.history;
+           }
+           if (len === 1 && Object.prototype.toString.call(args[0]) === "[object Array]" && args[0].length) {
+             //如果只有一个参数并且参数维数组并且数组长度不为0
+             let arr = args[0].slice();
+             //循环数组获取数组每一项对应的值 返回一个json key(数组每一项):value(数组项对应值)
+             return arr.reduce((acc, curr) => {
+               acc[curr] = this.storage.getItem(curr);
+               return acc;
+             }, {});
+           }
+           if (len === 1 && Object.prototype.toString.call(args[0]) === "[object String]" && args[0].length) {
+             //如果参数只有一个 并且类型是字符串 并且字符串长度不为0 获取对应项的值
+             //如果不传参数 返回所有的存储项目
+             return this.storage.getItem(args[0]);
+           }
+ 
+         }
+ 
+         //参数可以是字符串 数组
+         removeStorage(...args) {
+           //降维args参数数组 扁平化处理
+           args = args.flat(Infinity);
+           //循环删除每一项
+           args.forEach(item => {
+             if (typeof item !== 'object') {
+               if (this.history[item]) {
+                 delete this.history[item]
+               }
+               return this.storage.removeItem(String(item));
+               // this.setStorage.removeItem(String(item));
+             }
+           })
+         }
+ 
+         //清空所有的storage 并且清空history
+         clearStorage() {
+           this.history = {};
+           this.storage.clear();
+         }
+ 
+       }
+ 
+       w.SessionStorage = Storage;
+     })(window); */
+
+    (function (window) {
+      class Storage {
+        constructor(type) {
+          //该对象是用来当副本的
+          this.history = {};
+          this.storage = window[`${type}Storage`];
+        };
+        setItemCopy(...args) {
+          //如果没传参数,返回false 啥也不干
+          if (args.length === 0) {
+            return false;
+          }
+          //如果只传了一个参数
+          if (args.length === 1 && Object.prototype.toString.call(args[0]) === '[object Object]') {
+            for (let key in args[0]) {
+              this.storage.setItem(String(key), String(args[0][key]));
+              //顺便复制一份到副本里
+              this.history[String(key)] = String(args[0][key]);
+            }
+            //返回副本对象，里面是当前存储的数据
+            return this.history;
+          }
+
+          if (args.length === 2 && typeof args[0] === 'string' && typeof args[1] === 'string') {
+            this.storage.setItem(args[0], args[1]);
+            return {
+              [args[0]]: args[1]
+            }
+          }
+        };
+        getItemCopy(...args) {
+          if (args.length === 0) {
+            return false;
+          }
+
+          if (args.length === 1) {
+            if (typeof args[0] === 'string') {
+              //如果只是一个字符串的话，就返回这个数据
+              return this.storage.getItem(args[0]);
+            }
+            if (Array.isArray(args[0]) && args[0].length !== 0) {
+              //如果是数组的话，返回一个对象，里面是所有 键 和 键的值
+              let tempObj = {};
+              args[0].forEach(function (item) {
+                tempObj[item] = this.storage.getItem(item);
+              }.bind(this));
+              return tempObj;
+              // return args[0].reduce(function (acc, item) {
+              //   acc[item] = this.storage.getItem(item);
+              //   return acc;
+              // }, {})
+            }
+          }
+        };
+        removeItemCopy(...args) {
+          if (args.length === 0) {
+            return false;
+          }
+          if (args.length === 1) {
+            //如果只传一个参数并且是字符串，直接对应删除
+            if (typeof args[0] === 'string') {
+              this.storage.removeItem(args[0]);
+            }
+            //如果只传一个参数并且是数组的话，循环对应删除
+            if (Array.isArray(args[0])) {
+              let flatArr = args.flat(Infinity);
+              for (let flatArr of args[0]) {
+                this.storage.removeItem(flatArr);
+              }
+            }
+          }
+
+          //如果参数2个以上，全部降维成一个数组
+          if (args.length >= 2) {
+            let flatArr = args.flat(Infinity);
+            console.log(flatArr)
+            for (let key of flatArr) {
+              this.storage.removeItem(String(key));
+            }
+          }
+
+        };
+        clearItemCopy() {
+          this.history = {};
+          this.storage.clear();
+        };
+      }
+      //[['name','age'],'sex','like',['height',['weight','colors']]]
+      window.Storage = Storage;
+    })(window)
+
+    let sess = new Storage('local');
+    sess.setItemCopy({ 'name': '张三', 'age': '18' })
+  </script>
+</body>
+
+</html>
