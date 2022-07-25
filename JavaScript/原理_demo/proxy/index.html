@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      const fns = {
+        name: "abc",
+        // 绑定一个 get 陷阱
+        get value() {
+          console.log(this.name);
+        },
+        hi() {
+          console.log(this.name + "你好");
+          this.targetfn();
+        },
+      };
+
+      const proxy = new Proxy(fns, {
+        get(target, key, recevier) {
+          console.log("拦截挂在 fns 上的陷阱 " + key);
+          return Reflect.get(target, key);
+        },
+      });
+
+      // 目标对象
+      const target = {
+        name: `target's name`,
+        targetfn() {
+          console.log("hhhhh");
+        },
+      };
+
+      // Object.setPrototypeOf(target, fns);
+      Object.setPrototypeOf(target, proxy);      
+
+       target.value
+      // target.hi();
+    </script>
+  </body>
+</html>
+<!-- 
+
+  场景一：
+不做代理话（没有 proxy）
+target.__proto__ 指向 fns
+执行target.value，会顺着原型链网上找，找到fns的value，但这里的调用方是target，所以this也是target，所以this.name 就是 target's name
+
+场景二：
+做了代理，但没有Reflect没有receiver
+target.__proto__ 指向 proxy
+执行target.value，会顺着原型链网上找，找到fns的value，但这里的调用方是fns（没有指定receiver）
+所以this也是fns，所以this.name 就是 fns.name
+ -->

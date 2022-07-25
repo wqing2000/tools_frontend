@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      const objParent = {
+        name: "parent",
+      };
+      const objSon = {
+        name: "son",
+        // [Symbol.toStringTag]: "myson",
+        // splice: "",
+      };
+
+      const proxy = new Proxy(objParent, {
+        get(target, key, receiver) {
+          console.log("getter", key);
+          // console.log("getter", key.description);
+
+          // console.log(receiver); //溢出
+
+          // return target.key; //undefined
+          // let res = Reflect.get(target, key);
+          // return res;
+          // return Reflect.get(receiver, key); //溢出
+        },
+      });
+      Object.setPrototypeOf(objSon, proxy); //设置原型链
+
+      console.log(objSon);
+      // objSon对象有 [Symbol.toStringTag]: "myson" 这个属性时，打印结果如下：
+      // myson {name: 'son', Symbol(Symbol.toStringTag): 'myson'}
+      // splice
+      // splice
+
+      // objSon对象没有 [Symbol.toStringTag]: "myson" 这个属性时，打印结果如下：
+      // Symbol(Symbol.toStringTag)  // 非字符串
+      // splice
+      // splice
+
+      // let x = objSon.toString();
+      // console.log(x);
+
+      // console.log("----分割线----");
+      // console.log(objSon.name);
+      // console.log("----分割线----");
+      // console.log(objSon.haha);
+    </script>
+  </body>
+</html>
