@@ -1,0 +1,17 @@
+// ! 清除浮动 --- 解决高度塌陷
+// @ 1. 给高度塌陷的元素添加高度
+// @        缺点： 比较死板
+// @ 2. 给高度塌陷的元素设置属性（触发BFC规则）
+// @         overflow: hidden, position:fixed, display: inline-block
+// @         缺点： 会造成溢出内容隐藏
+// @ 3. 在高度塌陷的元素的里面的最后添加一个空的块元素，设置属性clear: both
+// @        缺点: 会产生很多空标签，造成性能损耗
+// * 4. 万能清除法：引入reset样式表，给需要清除浮动的元素添加class类名
+.clearfix:after {
+  content: "";
+  display: block;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  clear: both;
+}

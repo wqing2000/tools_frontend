@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div class="search">
+      <input type="text" class="search_content" /><br />
+      <ul class="list"></ul>
+    </div>
+  </body>
+</html>
+<script>
+  // taobao搜索框的实现
+  // https://suggest.taobao.com/sug?k=1&area=c2c&q=apple&code=utf-8&ts=1651716784581&callback=taobao
+  // 百度
+  // https://www.baidu.com/sugrec?pre=1&p=3&ie=utf-8&json=1&prod=pc&from=pc_web&sugsid=36309,36367,34813,36165,34584,35979,36281,26350,36302,36312,36061&wd=aaaaa&req=2&bs=jsonp&csor=5&cb=baidu_search
+
+  const search_content = document.querySelector(".search_content");
+  const list = document.querySelector(".list");
+
+  function taobao_search(d) {
+    let json = d;
+    // console.log(json.result);
+    let str = "";
+    for (let value of json.result) {
+      str += `<li>${value[0]}</li>`;
+    }
+
+    list.innerHTML = str;
+  }
+
+  function baidu_search(d) {
+    // console.log(json.g);
+    let json = d;
+    console.log(typeof json.g);
+    console.log(json);
+    let str = "";
+    // 判断接口给的是否是二维对象
+    if (typeof json.g === "object") {
+      for (let value of json.g) {
+        str += `<li>${value.q}</li>`;
+      }
+    } else if (typeof json.q !== "undefined") {
+      // 判断接口返回是否为空对象
+      str += `<li>${json.q}</li>`;
+    } else {
+    }
+
+    list.innerHTML = str;
+  }
+
+  search_content.oninput = function () {
+    let jsonp = document.querySelector("#jsonp");
+    // 优化，只有最后创建的才是需要的，前面的都变得没有意义
+    if (jsonp) {
+      //如果包含#jsonp的script标签存在就删除，保证创建一个。
+      jsonp.remove();
+    }
+
+    let cScript = document.createElement("script");
+    // cScript.src =
+    //   "https://suggest.taobao.com/sug?k=1&area=c2c&q=" +
+    //   search_content.value +
+    //   "&code=utf-8&ts=1651716784581&callback=taobao_search";
+    cScript.src = `https://www.baidu.com/sugrec?pre=1
+    &p=3&ie=utf-8&json=1&prod=pc&from=pc_web
+    &sugsid=36309,36367,34813,36165,34584,35979,36281,26350,36302,36312,36061
+    &wd=${search_content.value}&req=2&bs=jsonp&csor=5&cb=baidu_search`;
+    cScript.id = "jsonp"; //创建的script标签添加也给id选择器
+
+    document.body.appendChild(cScript);
+  };
+</script>
