@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body></body>
+</html>
+<script>
+  const bindX = function (_this, arr) {
+    console.log(this);
+    console.log(_this);
+    console.log(arr);
+    return (_this, arr) => {
+      this.apply(_this, arr);
+    };
+  };
+
+  Function.prototype.bindX = bindX;
+
+  const obj = {
+    name: "zhangsan",
+    age: 20,
+  };
+
+  function x(key) {
+    log(this.key);
+  }
+
+  console.log(x.bindX(obj, ["name"]));
+</script>

@@ -1,0 +1,306 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        #triangle {
+            width: 0;
+            height: 0;
+            border: 10px solid;
+            border-color: green white red yellow;
+        }
+    </style>            
+</head>
+
+<body>
+    <div id="triangle"></div>
+    <script>
+        const PENDING = 'pending';
+        const FULLFILED = 'fullfilled';
+        const REJECTED = 'rejected';
+
+        class MyPromise {
+            constructor(executor) {
+                this.state = PENDING;
+                this.value = undefined;
+                this.onFullFilledCallbacks = [];
+                this.onRejectedCallbacks = [];
+                try {
+                    executor(MyPromise.resolve.bind(this), MyPromise.reject.bind(this));
+                } catch (error) {
+                    MyPromise.reject(error);
+                }
+            }
+
+            static resolve(value) {
+                if (this.state === PENDING) {
+                    this.state = FULLFILED;
+                    this.value = value;
+                    this.onFullFilledCallbacks.forEach(fn => fn(value));
+                }
+            }
+            static reject(value) {
+                if (this.state === PENDING) {
+                    this.state = REJECTED;
+                    this.value = value;
+                    this.onRejectedCallbacks.forEach(fn => fn(value));
+                }
+            }
+
+            then(onFullFilled, onRejected) {
+                onFullFilled = typeof onFullFilled === 'function' ? onFullFilled : (value) => value;
+                onRejected = typeof onRejected === 'function' ? onRejected : (error) => {
+                    throw Error(error)
+                };
+                const newPromise = new MyPromise((resolve, reject) => {
+                    switch (this.state) {
+                        case FULLFILED: {
+                            setTimeout(() => {
+                                try {
+                                    const result = onFullFilled(this.value);
+                                    this.resolvePromise(newPromise, result, resolve, reject)
+                                } catch (e) {
+                                    reject(e);
+                                }
+                            });
+                            break;
+                        }
+                        case REJECTED: {
+                            setTimeout(() => {
+                                try {
+                                    const result = onRejected(this.value);
+                                    this.resolvePromise(newPromise, result, resolve, reject)
+                                } catch (e) {
+                                    reject(e);
+                                }
+                            });
+                            break;
+                        }
+                        case PENDING: {
+                            this.onFullFilledCallbacks.push(() => {
+                                setTimeout(() => {
+                                    try {
+                                        const result = onFullFilled(this.value);
+                                        this.resolvePromise(newPromise, result, resolve,
+                                            reject)
+                                    } catch (e) {
+                                        reject(e);
+                                    }
+                                });
+                            });
+                            this.onRejectedCallbacks.push(() => {
+                                setTimeout(() => {
+                                    try {
+                                        const result = onRejected(this.value);
+                                        this.resolvePromise(newPromise, result, resolve,
+                                            reject)
+                                    } catch (e) {
+                                        reject(e);
+                                    }
+                                });
+                            });
+                        }
+                    }
+                });
+                return newPromise;
+            }
+
+            // x 与 promise 相等
+            // 如果 promise 和 x 指向同一对象， 以 TypeError 为据因拒绝执行 promise
+
+            // x 为 Promise
+            // 如果 x 处于等待态， promise 需保持为等待态直至 x 被执行或拒绝
+            // 如果 x 处于执行态， 用相同的值执行 promise
+            // 如果 x 处于拒绝态， 用相同的据因拒绝 promise
+
+            // x 为对象或函数
+            // 把 x.then 赋值给 then
+            // 如果取 x.then 的值时抛出错误 e， 则以 e 为据因拒绝 promise
+            // 如果 then 是函数， 将 x 作为函数的作用域 this 调用之。 传递两个回调函数作为参数， 第一个参数叫做 resolvePromise， 第二个参数叫做 rejectPromise:
+            //     如果 resolvePromise 以值 y 为参数被调用， 则运行[Resolve]
+            // 如果 rejectPromise 以据因 r 为参数被调用， 则以据因 r 拒绝 promise
+            // 如果 resolvePromise 和 rejectPromise 均被调用， 或者被同一参数调用了多次， 则优先采用首次调用并忽略剩下的调用
+            // 如果 then 不是函数， 以 x 为参数执行 promise
+
+            // 如果 x 不为对象或者函数， 以 x 为参数执行 promise
+
+            resolvePromise(newPromise, result, resolve, reject) {
+                // 如果把自身返回出去了，会造成死循环
+                if (newPromise === result) {
+                    reject(new TypeError('Chaining cycle'))
+                }
+                if (result && (typeof result === 'object' || typeof result === 'function')) {
+                    try {
+                        const then = result.then;
+                        if (typeof then === 'function') {
+                            then.call(result, res => {
+                                this.resolvePromise(newPromise, res, resolve, reject)
+                            }, err => {
+                                reject(err)
+                            });
+                        } else {
+                            resolve(result);
+                        }
+                    } catch (error) {
+                        reject(error);
+                    }
+                } else {
+                    resolve(result);
+                }
+            }
+
+            static all(promiseArr) {
+                let isComplete = false;
+                return new MyPromise((resolve, reject) => {
+                    const result = new Array(promiseArr.length).fill(undefined);
+                    const onFullFilled = (data, index) => {
+                        if (isComplete) return;
+                        result[index] = data;
+                        if (result.every(res => res !== undefined)) {
+                            resolve(result);
+                        }
+                    }
+                    const onRejected = (err) => {
+                        if (isComplete) return;
+                        isComplete = true;
+                        reject(err)
+                    }
+                    promiseArr.forEach((promise, index) => {
+                        promise.then((data) => onFullFilled(data, index), onRejected)
+                    })
+                });
+            }
+
+            static race(promiseArr) {
+                let isComplete = false;
+                return new MyPromise((resolve, reject) => {
+                    const onFullFilled = (data) => {
+                        if (isComplete) return;
+                        isComplete = true;
+                        resolve(data);
+                    }
+                    const onRejected = (err) => {
+                        if (isComplete) return;
+                        isComplete = true;
+                        reject(err)
+                    }
+                    promiseArr.forEach((promise) => {
+                        promise.then(onFullFilled, onRejected)
+                    })
+                });
+            }
+
+            static any(promiseArr) {
+                let isComplete = false;
+                return new MyPromise((resolve, reject) => {
+                    const result = new Array(promiseArr.length).fill(undefined);
+                    const onFullFilled = (data) => {
+                        if (isComplete) return;
+                        isComplete = true;
+                        resolve(data);
+                    }
+                    const onRejected = (index) => {
+                        if (isComplete) return;
+                        result[index] = -1;
+                        if (result.every(res => res === -1)) {
+                            reject(new Error('All promises were rejected'));
+                        }
+                    }
+                    promiseArr.forEach((promise, index) => {
+                        promise.then(onFullFilled, () => onRejected(index))
+                    })
+                });
+            }
+
+
+            static allSettled(promiseArr) {
+                return new MyPromise((resolve, reject) => {
+                    const result = new Array(promiseArr.length).fill(undefined);
+
+                    const statusChange = () => {
+                        if (result.every(res => res !== undefined)) {
+                            resolve(result);
+                        }
+                    }
+                    promiseArr.forEach((promise, index) => {
+                        promise.then((data) => {
+                            result[index] = {
+                                status: "fulfilled",
+                                value: data
+                            };
+                            statusChange();
+                        }, (err) => {
+                            result[index] = {
+                                status: 'rejected',
+                                reason: err
+                            };
+                            statusChange();
+                        })
+                    })
+                });
+            }
+        }
+
+        // var p1 = new MyPromise((resolve, reject) => {
+        //     resolve('p1')
+        // })
+        // p1.then((res) => {
+        //         return new MyPromise((resolve, reject) => {
+        //             resolve(new MyPromise((resolve, reject) => {
+        //                 resolve('p2')
+        //             }))
+        //         })
+        //     })
+        //     .then((res1) => {
+        //         //Promise {state: "fulfilled", value: "p2"}
+        //         console.log(res1)
+        //     })
+
+        {
+            const p = new MyPromise((resolve, reject) => {
+                setTimeout(() => {
+                    // resolve('p')
+                    reject('error');
+                }, 1000);
+            });
+            const p1 = new MyPromise((resolve, reject) => {
+                resolve('p1')
+                // reject('error');
+            });
+            const p2 = new MyPromise((resolve, reject) => {
+                // resolve('p2')
+                reject('error');
+            });
+            // MyPromise.all([p, p1, p2]).then(res => {
+            //     console.log(res);
+            // }, err => {
+            //     console.log(err);
+            // })
+
+            // MyPromise.race([p, p1, p2]).then(res => {
+            //     console.log(res);
+            // }, err => {
+            //     console.log(err);
+            // })
+
+            // MyPromise.any([p, p1, p2]).then(res => {
+            //     console.log(res);
+            // }, err => {
+            //     console.log(err);
+            // });
+
+            MyPromise.allSettled([p, p1, p2]).then(res => {
+                console.log(res);
+            }, err => {
+                console.log(err);
+            });
+        }
+    </script>
+</body>
+
+</html>
